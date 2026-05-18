@@ -745,6 +745,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
   </div>
 </div>
 
+<!-- INSTALLMENTS MANAGEMENT MODAL -->
+<div class="budget-overlay" id="installManageModal">
+  <div class="budget-modal" style="max-height:85vh;">
+    <div class="modal-header">
+      <div class="modal-title">📅 分期管理</div>
+      <button class="modal-close" onclick="closeInstallmentsModal()">✕</button>
+    </div>
+    <div id="installManageList"></div>
+  </div>
+</div>
+
 <!-- EDIT INVESTMENT MODAL -->
 <div class="contrib-overlay" id="editInvModal">
   <div class="contrib-modal" style="max-width:380px;">
@@ -1644,7 +1655,9 @@ function saveInst(){
   } else {
     data.installments.push({id:data.nextId++,name,monthly,paid,total,remaining});
   }
-  save(); closeEditInst(); renderAll();
+  save(); closeEditInst();
+  if(document.getElementById('installManageModal').classList.contains('open')) renderInstallmentsManage();
+  renderAll();
   showToast('✅ 分期已保存','success');
 }
 function deleteInst(id){
@@ -1802,9 +1815,57 @@ function renderExpenses(){
 }
 
 function openInstallmentsModal(){
-  // Reuse installment edit modal by showing a list view in a quick alert
-  showToast('使用「✏ 预设」旁的菜单访问完整分期管理','info');
-  // For full management, embed it here — open a generic info
+  renderInstallmentsManage();
+  document.getElementById('installManageModal').classList.add('open');
+}
+function closeInstallmentsModal(){
+  document.getElementById('installManageModal').classList.remove('open');
+  // Refresh expense page since installment summary may have changed
+  renderAll();
+}
+
+function renderInstallmentsManage(){
+  const totalMonthly=data.installments.filter(i=>i.paid<i.total).reduce((s,i)=>s+i.monthly,0);
+  document.getElementById('installManageList').innerHTML=`
+    <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:11px;color:var(--text3);">每月分期总额</span>
+      <span style="font-size:16px;font-weight:700;color:var(--amber);">RM ${totalMonthly.toLocaleString()}/月</span>
+    </div>`+
+  data.installments.map(inst=>{
+    const done=inst.paid>=inst.total;
+    const pct=Math.round(inst.paid/inst.total*100);
+    return `<div class="inst-item ${done?'inst-completed':''}">
+      <div class="inst-header">
+        <div>
+          <div class="inst-name">${inst.name}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;">${inst.paid}/${inst.total} 期 · 剩 ${inst.total-inst.paid} 期</div>
+        </div>
+        <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <div class="inst-monthly">RM ${inst.monthly.toLocaleString()}/月</div>
+          ${inst.remaining>0?`<div style="font-size:10px;color:var(--text3);">欠 RM ${inst.remaining.toLocaleString()}</div>`:''}
+        </div>
+      </div>
+      <div class="inst-progress-bar"><div class="inst-progress-fill" style="width:${pct}%"></div></div>
+      <div class="inst-footer">
+        <span>${pct}% 已还清</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span class="inst-badge ${done?'done':'active'}">${done?'✓ 完成':'进行中'}</span>
+          <button onclick="openEditInst(${inst.id})" style="background:none;border:1px solid var(--border);color:var(--text3);padding:2px 8px;border-radius:20px;font-size:10px;cursor:pointer;font-family:var(--font);">编辑</button>
+          <button onclick="deleteInstManage(${inst.id})" style="background:none;border:1px solid var(--border);color:var(--text3);padding:2px 8px;border-radius:20px;font-size:10px;cursor:pointer;font-family:var(--font);">删除</button>
+        </div>
+      </div>
+      ${done?'':`<button onclick="payInstallment(${inst.id})" style="width:100%;margin-top:8px;padding:8px;background:rgba(232,160,48,.12);border:1px solid var(--amber);color:var(--amber);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;">✓ 还了这期 (RM ${inst.monthly.toLocaleString()})</button>`}
+    </div>`;
+  }).join('')+`
+    <button onclick="openEditInst(null)" style="width:100%;padding:11px;background:none;border:1px dashed var(--border2);border-radius:var(--radius);color:var(--gold);font-family:var(--font);font-size:13px;cursor:pointer;margin-top:4px;">+ 新增分期</button>`;
+}
+
+function deleteInstManage(id){
+  if(!confirm('删除此分期？'))return;
+  data.installments=data.installments.filter(i=>i.id!==id);
+  save();
+  renderInstallmentsManage();
+  renderAll();
 }
 
 // ===== 2. INCOME =====
@@ -2532,7 +2593,7 @@ function saveNetWorth(){
 }
 
 // Close on overlay click
-['txModal','contribModal','budgetModal','nwModal','quickAmtModal','presetModal','editPresetModal','editInstModal','historyModal','editTxModal','editInvModal'].forEach(id=>{
+['txModal','contribModal','budgetModal','nwModal','quickAmtModal','presetModal','editPresetModal','editInstModal','historyModal','editTxModal','editInvModal','installManageModal'].forEach(id=>{
   const el=document.getElementById(id);
   if(!el) return;
   el.addEventListener('click',e=>{
@@ -2547,6 +2608,7 @@ function saveNetWorth(){
       else if(id==='historyModal') closeHistory();
       else if(id==='editTxModal') closeEditTx();
       else if(id==='editInvModal') closeEditInvestment();
+      else if(id==='installManageModal') closeInstallmentsModal();
       else closeEditPreset();
     }
   });
