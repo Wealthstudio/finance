@@ -772,6 +772,40 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
   </div>
 </div>
 
+<!-- EDIT GOAL MODAL -->
+<div class="contrib-overlay" id="editGoalModal">
+  <div class="contrib-modal" style="max-width:360px;">
+    <div style="font-size:15px;font-weight:600;margin-bottom:16px;" id="editGoalTitle">新增目标</div>
+    <input type="hidden" id="editGoalId">
+    <div class="form-group">
+      <div class="form-label">名称</div>
+      <input type="text" id="editGoalName" class="form-control" placeholder="例：紧急基金、买车...">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <div class="form-label">目标金额 (RM)</div>
+        <input type="number" id="editGoalTarget" class="form-control" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <div class="form-label">已积累 (RM)</div>
+        <input type="number" id="editGoalCurrent" class="form-control" inputmode="numeric">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <div class="form-label">图标 Emoji</div>
+        <input type="text" id="editGoalIcon" class="form-control" placeholder="🎯" style="font-size:20px;text-align:center;" maxlength="2">
+      </div>
+      <div class="form-group">
+        <div class="form-label">备注</div>
+        <input type="text" id="editGoalNote" class="form-control" placeholder="(可选)">
+      </div>
+    </div>
+    <button class="btn-submit" onclick="saveGoal()">保存</button>
+    <button onclick="closeEditGoal()" style="width:100%;padding:9px;background:none;border:none;color:var(--text3);cursor:pointer;font-family:var(--font);font-size:13px;margin-top:6px;">取消</button>
+  </div>
+</div>
+
 <!-- INSTALLMENTS MANAGEMENT MODAL -->
 <div class="budget-overlay" id="installManageModal">
   <div class="budget-modal" style="max-height:85vh;">
@@ -2064,13 +2098,17 @@ function renderSaving(){
       <div style="height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-bottom:5px;">
         <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));border-radius:2px;"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:8px;">
         <span style="color:var(--gold);">${fmt(g.current)}</span>
         <span style="color:var(--text3);">/ ${fmt(g.target)}</span>
       </div>
-      <button onclick="openContrib(${g.id})" style="margin-top:6px;background:none;border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:var(--radius-sm);font-family:var(--font);font-size:11px;cursor:pointer;">＋ 存入</button>
+      <div style="display:flex;gap:6px;">
+        <button onclick="openContrib(${g.id})" style="flex:1;background:none;border:1px solid var(--border);color:var(--text2);padding:5px;border-radius:var(--radius-sm);font-family:var(--font);font-size:11px;cursor:pointer;">＋ 存入</button>
+        <button onclick="openEditGoal(${g.id})" style="flex:1;background:none;border:1px solid var(--border);color:var(--text2);padding:5px;border-radius:var(--radius-sm);font-family:var(--font);font-size:11px;cursor:pointer;">✏ 编辑</button>
+        <button onclick="deleteGoal(${g.id})" style="background:none;border:1px solid var(--border);color:var(--red);padding:5px 10px;border-radius:var(--radius-sm);font-family:var(--font);font-size:11px;cursor:pointer;">🗑</button>
+      </div>
     </div>`;
-  }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px;">还没有储蓄目标<br><small>去 🛡️ 应急 或新增目标</small></div>';
+  }).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px;">还没有储蓄目标<br><small>点上方「+ 新增目标」创建</small></div>';
 }
 
 // ===== 4. INVESTMENT =====
@@ -2211,11 +2249,15 @@ function renderBackup(){
       <div style="height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-bottom:5px;">
         <div style="height:100%;width:${p}%;background:linear-gradient(90deg,#5B9BD5,#2AB8A0);border-radius:2px;"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:8px;">
         <span style="color:var(--blue);">${fmt(g.current)}</span>
         <span style="color:var(--text3);">/ ${fmt(g.target)}</span>
       </div>
-      <button onclick="openContrib(${g.id})" style="background:none;border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:var(--radius-sm);font-family:var(--font);font-size:11px;cursor:pointer;">＋ 存入</button>
+      <div style="display:flex;gap:6px;">
+        <button onclick="openContrib(${g.id})" style="flex:1;background:none;border:1px solid var(--border);color:var(--text2);padding:5px;border-radius:var(--radius-sm);font-family:var(--font);font-size:11px;cursor:pointer;">＋ 存入</button>
+        <button onclick="openEditGoal(${g.id})" style="flex:1;background:none;border:1px solid var(--border);color:var(--text2);padding:5px;border-radius:var(--radius-sm);font-family:var(--font);font-size:11px;cursor:pointer;">✏ 编辑</button>
+        <button onclick="deleteGoal(${g.id})" style="background:none;border:1px solid var(--border);color:var(--red);padding:5px 10px;border-radius:var(--radius-sm);font-family:var(--font);font-size:11px;cursor:pointer;">🗑</button>
+      </div>
     </div>`;
   }).join(''):`<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px;">还没有应急基金目标<br><button onclick="quickAddBackupGoal(${Math.round(recommended)})" style="margin-top:10px;background:var(--blue);border:none;color:white;padding:7px 14px;border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;cursor:pointer;">+ 一键创建（${fmt(recommended)}）</button></div>`;
 }
@@ -2526,11 +2568,38 @@ function saveContrib(){
   showToast('✅ 已存入 '+fmt(amt),'success');
 }
 function addGoalPrompt(){
-  const name=prompt('目标名称:');if(!name)return;
-  const target=parseFloat(prompt('目标金额 (RM):'));if(!target||isNaN(target))return;
-  const icons=['🏠','🚗','✈️','💎','🎓','💰','📱','🏋️','🌴','🎯'];
-  data.goals.push({id:data.nextId++,name,target,current:0,icon:icons[Math.floor(Math.random()*icons.length)],note:''});
-  save(); renderAll();
+  openEditGoal(null);
+}
+function openEditGoal(id){
+  const g=id?(data.goals||[]).find(x=>x.id===id):null;
+  document.getElementById('editGoalId').value=id||'';
+  document.getElementById('editGoalTitle').textContent=g?'编辑目标':'新增目标';
+  document.getElementById('editGoalName').value=g?g.name:'';
+  document.getElementById('editGoalTarget').value=g?g.target:'';
+  document.getElementById('editGoalCurrent').value=g?g.current:'0';
+  document.getElementById('editGoalIcon').value=g?g.icon:'🎯';
+  document.getElementById('editGoalNote').value=g?g.note||'':'';
+  document.getElementById('editGoalModal').classList.add('open');
+  setTimeout(()=>document.getElementById('editGoalName').focus(),300);
+}
+function closeEditGoal(){ document.getElementById('editGoalModal').classList.remove('open'); }
+function saveGoal(){
+  const name=document.getElementById('editGoalName').value.trim();
+  if(!name){alert('请输入名称');return;}
+  const target=parseFloat(document.getElementById('editGoalTarget').value)||0;
+  const current=parseFloat(document.getElementById('editGoalCurrent').value)||0;
+  const icon=document.getElementById('editGoalIcon').value||'🎯';
+  const note=document.getElementById('editGoalNote').value;
+  const idVal=document.getElementById('editGoalId').value;
+  if(!data.goals) data.goals=[];
+  if(idVal){
+    const g=data.goals.find(x=>x.id===parseInt(idVal));
+    if(g) Object.assign(g,{name,target,current,icon,note});
+  } else {
+    data.goals.push({id:data.nextId++,name,target,current,icon,note});
+  }
+  save(); closeEditGoal(); renderAll();
+  showToast('✅ 目标已保存','success');
 }
 function deleteGoal(id){
   if(!confirm('删除此目标？'))return;
@@ -2620,7 +2689,7 @@ function saveNetWorth(){
 }
 
 // Close on overlay click
-['txModal','contribModal','budgetModal','nwModal','quickAmtModal','presetModal','editPresetModal','editInstModal','historyModal','editTxModal','editInvModal','installManageModal'].forEach(id=>{
+['txModal','contribModal','budgetModal','nwModal','quickAmtModal','presetModal','editPresetModal','editInstModal','historyModal','editTxModal','editInvModal','installManageModal','editGoalModal'].forEach(id=>{
   const el=document.getElementById(id);
   if(!el) return;
   el.addEventListener('click',e=>{
@@ -2636,6 +2705,7 @@ function saveNetWorth(){
       else if(id==='editTxModal') closeEditTx();
       else if(id==='editInvModal') closeEditInvestment();
       else if(id==='installManageModal') closeInstallmentsModal();
+      else if(id==='editGoalModal') closeEditGoal();
       else closeEditPreset();
     }
   });
