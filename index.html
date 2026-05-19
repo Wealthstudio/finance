@@ -462,35 +462,56 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 
   <!-- 3. SAVING PANEL -->
   <div class="panel" id="panel-saving">
+
+    <!-- Real-time savings summary -->
     <div class="card" style="background:var(--bg3);">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">本月储蓄率</div>
-      <div style="display:flex;align-items:baseline;gap:10px;">
-        <div style="font-size:36px;font-weight:700;color:var(--gold-light);" id="savingRateBig">0%</div>
-        <div style="font-size:12px;color:var(--text3);" id="savingAmount">RM 0 净储蓄</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">本月储蓄率</div>
+          <div style="font-size:32px;font-weight:700;" id="savingRateBig">0%</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">本月净储蓄</div>
+          <div style="font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;" id="savingAmount">RM 0</div>
+        </div>
       </div>
-      <div style="height:6px;background:var(--bg2);border-radius:3px;margin-top:10px;overflow:hidden;">
-        <div id="savingRateBar" style="height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));border-radius:3px;width:0%;"></div>
+      <div style="height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;margin-bottom:4px;">
+        <div id="savingRateBar" style="height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));border-radius:3px;width:0%;transition:width .4s;"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:4px;">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);">
         <span>建议 ≥ 20%</span>
         <span id="savingTargetLabel">目标 30%</span>
       </div>
     </div>
 
-    <!-- Cumulative -->
+    <!-- Editable targets -->
     <div class="card">
-      <div class="card-title">💎 累计净储蓄</div>
-      <div style="font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;" id="cumulativeSavings">RM 0</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:2px;">从开始记账至今</div>
-      <div style="height:150px;margin-top:12px;"><canvas id="savingTrendChart"></canvas></div>
+      <div class="card-title">⚙️ 储蓄设置（实时调整）</div>
+      <div class="form-group">
+        <div class="form-label">储蓄率目标 (%)</div>
+        <input type="number" id="savingTargetRate" class="form-control" value="30" min="0" max="100" inputmode="numeric" oninput="onSavingSettingChange()">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <div class="form-label">月均收入（自动读取，可手动覆盖）</div>
+        <input type="number" id="savingIncomeOverride" class="form-control" placeholder="自动计算" inputmode="numeric" oninput="onSavingSettingChange()">
+      </div>
     </div>
 
     <!-- This month prediction -->
     <div class="card" id="savingPrediction"></div>
 
-    <!-- Untouchable savings goals -->
+    <!-- Cumulative -->
     <div class="card">
-      <div class="card-title">🔒 储蓄目标（不动存款）<button onclick="addGoalPrompt()" style="background:none;border:1px solid var(--gold);color:var(--gold);padding:3px 10px;border-radius:20px;font-size:11px;cursor:pointer;font-family:var(--font);">+ 新增目标</button></div>
+      <div class="card-title">💎 累计净储蓄</div>
+      <div style="font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;" id="cumulativeSavings">RM 0</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px;">从开始记账至今所有收支结余</div>
+    </div>
+
+    <!-- Goals -->
+    <div class="card">
+      <div class="card-title">🔒 储蓄目标（不动存款）
+        <button onclick="addGoalPrompt()" style="background:none;border:1px solid var(--gold);color:var(--gold);padding:3px 10px;border-radius:20px;font-size:11px;cursor:pointer;font-family:var(--font);">+ 新增</button>
+      </div>
       <div id="savingGoalsList"></div>
     </div>
   </div>
@@ -1992,97 +2013,103 @@ function renderIncome(){
 // ===== 3. SAVING =====
 function renderSaving(){
   const m=thisMonthStats();
-  const rate=Math.round(m.rate*100);
-  document.getElementById('savingRateBig').textContent=rate+'%';
-  document.getElementById('savingRateBig').style.color=rate>=30?'var(--green)':rate>=20?'var(--gold-light)':rate>=0?'var(--amber)':'var(--red)';
-  document.getElementById('savingAmount').textContent=fmt(m.balance)+' 净储蓄';
-  document.getElementById('savingRateBar').style.width=Math.min(100,Math.max(0,rate))+'%';
+  // Restore saved target rate
+  const savedTarget=parseInt(localStorage.getItem('savingTarget')||'30');
+  const savedIncOverride=localStorage.getItem('savingIncOverride')||'';
+  const inputTarget=document.getElementById('savingTargetRate');
+  const inputInc=document.getElementById('savingIncomeOverride');
+  if(inputTarget && !inputTarget._dirty) inputTarget.value=savedTarget;
+  if(inputInc && !inputInc._dirty) inputInc.value=savedIncOverride;
+  updateSavingDisplay();
+}
+
+function onSavingSettingChange(){
+  // Mark as dirty so renderSaving doesn't overwrite
+  document.getElementById('savingTargetRate')._dirty=true;
+  document.getElementById('savingIncomeOverride')._dirty=true;
+  // Save setting
+  localStorage.setItem('savingTarget', document.getElementById('savingTargetRate').value||'30');
+  localStorage.setItem('savingIncOverride', document.getElementById('savingIncomeOverride').value||'');
+  updateSavingDisplay();
+}
+
+function updateSavingDisplay(){
+  const m=thisMonthStats();
+  const targetRate=parseInt(document.getElementById('savingTargetRate')?.value||'30')||30;
+  const incOverride=parseFloat(document.getElementById('savingIncomeOverride')?.value||'0');
+  const effectiveInc=incOverride>0?incOverride:m.inc;
+
+  const rate=effectiveInc>0?Math.round((effectiveInc-m.exp)/effectiveInc*100):0;
+  const netSave=effectiveInc-m.exp;
+
+  // Rate display
+  const rateEl=document.getElementById('savingRateBig');
+  if(rateEl){
+    rateEl.textContent=rate+'%';
+    rateEl.style.color=rate>=targetRate?'var(--green)':rate>=20?'var(--gold-light)':rate>=0?'var(--amber)':'var(--red)';
+  }
+  const amtEl=document.getElementById('savingAmount');
+  if(amtEl){
+    amtEl.textContent=fmt(netSave);
+    amtEl.style.color=netSave>=0?'var(--gold-light)':'var(--red)';
+  }
+  const barEl=document.getElementById('savingRateBar');
+  if(barEl) barEl.style.width=Math.min(100,Math.max(0,rate))+'%';
+  const lblEl=document.getElementById('savingTargetLabel');
+  if(lblEl) lblEl.textContent='目标 '+targetRate+'%';
+
+  // Target reached amount
+  const targetAmount=Math.round(effectiveInc*targetRate/100);
+  const gap=targetAmount-netSave;
 
   // Cumulative
   let cumulative=0;
-  data.transactions.forEach(t=>{
-    cumulative+=(t.type==='income'?t.amount:-t.amount);
-  });
-  document.getElementById('cumulativeSavings').textContent=fmt(cumulative);
-  document.getElementById('cumulativeSavings').style.color=cumulative>=0?'var(--gold-light)':'var(--red)';
+  data.transactions.forEach(t=>{ cumulative+=(t.type==='income'?t.amount:-t.amount); });
+  const cumEl=document.getElementById('cumulativeSavings');
+  if(cumEl){
+    cumEl.textContent=fmt(cumulative);
+    cumEl.style.color=cumulative>=0?'var(--gold-light)':'var(--red)';
+  }
 
-  // Monthly savings prediction
+  // Prediction card
   const now=new Date();
   const daysInMonth=new Date(currentYear,currentMonth,0).getDate();
   const daysElapsed=(currentYear===now.getFullYear()&&currentMonth===now.getMonth()+1)?now.getDate():daysInMonth;
   const daysLeft=Math.max(0,daysInMonth-daysElapsed);
-  const dailyExpRate=daysElapsed>0?m.exp/daysElapsed:0;
-  const projectedMonthExp=dailyExpRate*daysInMonth;
-  // Assume income mostly already received; project: remaining = inc - projectedExp
-  const projectedBalance=m.inc-projectedMonthExp;
-  const predictionCard=document.getElementById('savingPrediction');
-  if(predictionCard){
-    if(daysLeft>0&&dailyExpRate>0){
-      predictionCard.innerHTML=`
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">📊 本月预测（剩 ${daysLeft} 天）</div>
-        <div style="display:flex;justify-content:space-between;align-items:baseline;">
-          <span style="font-size:12px;color:var(--text2);">按当前消费速度</span>
-          <span style="font-size:18px;font-weight:700;color:${projectedBalance>=0?'var(--gold-light)':'var(--red)'};">${projectedBalance>=0?'存下 ':'透支 '}${fmt(Math.abs(projectedBalance))}</span>
+  const dailyExp=daysElapsed>0?m.exp/daysElapsed:0;
+  const projectedExp=dailyExp*daysInMonth;
+  const projectedSave=effectiveInc-projectedExp;
+  const projRate=effectiveInc>0?Math.round(projectedSave/effectiveInc*100):0;
+  const pred=document.getElementById('savingPrediction');
+  if(pred){
+    if(daysLeft>0&&dailyExp>0){
+      const hitTarget=projRate>=targetRate;
+      pred.innerHTML=`
+        <div class="card-title">📊 本月预测（剩 ${daysLeft} 天）</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px;">
+            <div style="font-size:10px;color:var(--text3);">预计月底储蓄</div>
+            <div style="font-size:16px;font-weight:700;color:${projectedSave>=0?'var(--gold-light)':'var(--red)'};">${fmt(projectedSave)}</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px;">
+            <div style="font-size:10px;color:var(--text3);">预计储蓄率</div>
+            <div style="font-size:16px;font-weight:700;color:${hitTarget?'var(--green)':'var(--amber)'};">${projRate}%</div>
+          </div>
         </div>
-        <div style="font-size:10px;color:var(--text3);margin-top:4px;">日均支出 ${fmt(Math.round(dailyExpRate))} · 月底预计支出 ${fmt(Math.round(projectedMonthExp))}</div>
+        <div style="font-size:11px;color:var(--text3);">
+          日均支出 ${fmt(Math.round(dailyExp))} ·
+          ${hitTarget?
+            `✅ 预计达到 ${targetRate}% 目标`:
+            `⚠️ 还差 <b style="color:var(--amber)">${fmt(gap)}</b> 才达 ${targetRate}% 目标`}
+        </div>
+        ${gap>0&&daysLeft>0?`<div style="font-size:11px;color:var(--text3);margin-top:4px;">💡 剩余 ${daysLeft} 天每天少花 ${fmt(Math.round(gap/daysLeft))} 可达目标</div>`:''}
       `;
     } else {
-      predictionCard.innerHTML='<div style="color:var(--text3);font-size:12px;text-align:center;padding:10px;">记几笔账后会显示本月预测</div>';
+      pred.innerHTML='<div style="color:var(--text3);font-size:12px;text-align:center;padding:10px;">记几笔账后会显示本月预测</div>';
     }
   }
 
-  // Cumulative trend (last 12 months running balance)
-  const months12=[],cumVals=[];
-  let running=0;
-  // Get all months before/equal current, sorted
-  const monthKeys=new Set();
-  data.transactions.forEach(t=>{
-    const d=new Date(t.date);
-    monthKeys.add(d.getFullYear()*12+d.getMonth());
-  });
-  const sortedKeys=[...monthKeys].sort((a,b)=>a-b);
-  const monthSums={};
-  data.transactions.forEach(t=>{
-    const d=new Date(t.date);
-    const k=d.getFullYear()*12+d.getMonth();
-    if(!monthSums[k]) monthSums[k]=0;
-    monthSums[k]+=(t.type==='income'?t.amount:-t.amount);
-  });
-  // Build last 12 months ending at currentYear/currentMonth
-  for(let i=11;i>=0;i--){
-    let mm=currentMonth-1-i, yy=currentYear;
-    while(mm<0){mm+=12;yy--;}
-    const k=yy*12+mm;
-    months12.push(MONTHS_SHORT[mm]);
-  }
-  // Compute running total up to each of last 12 months
-  const startKey=Math.min(...months12.map((_,i)=>{
-    let mm=currentMonth-1-(11-i), yy=currentYear;
-    while(mm<0){mm+=12;yy--;}
-    return yy*12+mm;
-  }));
-  // Pre-compute total before window
-  let preTotal=0;
-  sortedKeys.forEach(k=>{ if(k<startKey) preTotal+=monthSums[k]||0; });
-  let r=preTotal;
-  for(let i=0;i<12;i++){
-    let mm=currentMonth-1-(11-i), yy=currentYear;
-    while(mm<0){mm+=12;yy--;}
-    const k=yy*12+mm;
-    r+=monthSums[k]||0;
-    cumVals.push(r);
-  }
-  if(charts.savingTrend) charts.savingTrend.destroy();
-  charts.savingTrend=new Chart(document.getElementById('savingTrendChart'),{
-    type:'line',
-    data:{labels:months12,datasets:[{label:'累计',data:cumVals,borderColor:'rgba(200,153,30,.9)',backgroundColor:'rgba(200,153,30,.1)',fill:true,tension:.4,pointRadius:2,borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{x:{ticks:{color:'#555770',font:{size:10}},grid:{display:false}},
-              y:{ticks:{color:'#555770',font:{size:10},callback:v=>fmtK(v)},grid:{color:'rgba(255,255,255,0.03)'}}}}
-  });
-
-  // Saving goals (exclude backup/emergency)
-  const savingKeywords=['存款','储蓄','基金','房子','车','梦想','投资'];
+  // Goals
   const backupKeywords=['应急','紧急','备用'];
   const savingGoals=(data.goals||[]).filter(g=>{
     const text=g.name+' '+g.note;
