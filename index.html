@@ -484,36 +484,51 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
       </div>
     </div>
 
-    <!-- Editable targets -->
+    <!-- Editable settings -->
     <div class="card">
-      <div class="card-title">⚙️ 储蓄设置（实时调整）</div>
-      <div class="form-group">
-        <div class="form-label">储蓄率目标 (%)</div>
-        <input type="number" id="savingTargetRate" class="form-control" value="30" min="0" max="100" inputmode="numeric" oninput="onSavingSettingChange()">
-      </div>
-      <div class="form-group" style="margin-bottom:0;">
-        <div class="form-label">月均收入（自动读取，可手动覆盖）</div>
-        <input type="number" id="savingIncomeOverride" class="form-control" placeholder="自动计算" inputmode="numeric" oninput="onSavingSettingChange()">
+      <div class="card-title">⚙️ 储蓄设置</div>
+      <div class="form-row">
+        <div class="form-group">
+          <div class="form-label">储蓄率目标 (%)</div>
+          <input type="number" id="savingTargetRate" class="form-control" value="30" min="0" max="100" inputmode="numeric" oninput="onSavingSettingChange()">
+        </div>
+        <div class="form-group">
+          <div class="form-label">月收入（可覆盖）</div>
+          <input type="number" id="savingIncomeOverride" class="form-control" placeholder="自动" inputmode="numeric" oninput="onSavingSettingChange()">
+        </div>
       </div>
     </div>
 
     <!-- This month prediction -->
     <div class="card" id="savingPrediction"></div>
 
-    <!-- Cumulative -->
+    <!-- Actual savings accounts — fully editable -->
     <div class="card">
-      <div class="card-title">💎 累计净储蓄</div>
-      <div style="font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;" id="cumulativeSavings">RM 0</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:2px;">从开始记账至今所有收支结余</div>
+      <div class="card-title">🏦 实际储蓄账户
+        <button onclick="openEditSavingAccount(null)" style="background:none;border:1px solid var(--gold);color:var(--gold);padding:3px 10px;border-radius:20px;font-size:11px;cursor:pointer;font-family:var(--font);">+ 新增</button>
+      </div>
+      <div id="savingAccountsList"></div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;color:var(--text2);font-weight:600;">总储蓄</span>
+        <span style="font-size:18px;font-weight:700;color:var(--gold-light);font-variant-numeric:tabular-nums;" id="savingAccountsTotal">RM 0</span>
+      </div>
     </div>
 
     <!-- Goals -->
     <div class="card">
-      <div class="card-title">🔒 储蓄目标（不动存款）
+      <div class="card-title">🎯 储蓄目标
         <button onclick="addGoalPrompt()" style="background:none;border:1px solid var(--gold);color:var(--gold);padding:3px 10px;border-radius:20px;font-size:11px;cursor:pointer;font-family:var(--font);">+ 新增</button>
       </div>
       <div id="savingGoalsList"></div>
     </div>
+
+    <!-- Cumulative from transactions -->
+    <div class="card">
+      <div class="card-title">📊 记账累计结余</div>
+      <div style="font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;" id="cumulativeSavings">RM 0</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px;">基于 App 内所有收支记录自动计算</div>
+    </div>
+
   </div>
 
   <!-- 4. INVESTMENT PANEL -->
@@ -790,6 +805,28 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
     <button class="btn-submit" onclick="saveEditTx()">保存修改</button>
     <button onclick="deleteEditTx()" style="width:100%;padding:9px;background:none;border:none;color:var(--red);cursor:pointer;font-family:var(--font);font-size:13px;margin-top:6px;">🗑 删除此记录</button>
     <button onclick="closeEditTx()" style="width:100%;padding:6px;background:none;border:none;color:var(--text3);cursor:pointer;font-family:var(--font);font-size:13px;">取消</button>
+  </div>
+</div>
+
+<!-- EDIT SAVING ACCOUNT MODAL -->
+<div class="contrib-overlay" id="editSavingAccModal">
+  <div class="contrib-modal" style="max-width:360px;">
+    <div style="font-size:15px;font-weight:600;margin-bottom:16px;" id="editSavingAccTitle">新增储蓄账户</div>
+    <input type="hidden" id="editSavingAccId">
+    <div class="form-group">
+      <div class="form-label">账户名称</div>
+      <input type="text" id="editSavingAccName" class="form-control" placeholder="例：Maybank 储蓄、ASB、定存...">
+    </div>
+    <div class="form-group">
+      <div class="form-label">当前金额 (RM)</div>
+      <input type="number" id="editSavingAccAmount" class="form-control amount-input" placeholder="0" inputmode="numeric" style="font-size:24px;padding:12px;">
+    </div>
+    <div class="form-group" style="margin-bottom:0;">
+      <div class="form-label">备注（可选）</div>
+      <input type="text" id="editSavingAccNote" class="form-control" placeholder="例：月供扣账户、不动款项...">
+    </div>
+    <button class="btn-submit" onclick="saveSavingAccount()" style="margin-top:14px;">保存</button>
+    <button onclick="closeEditSavingAcc()" style="width:100%;padding:9px;background:none;border:none;color:var(--text3);cursor:pointer;font-family:var(--font);font-size:13px;margin-top:6px;">取消</button>
   </div>
 </div>
 
@@ -2010,6 +2047,59 @@ function renderIncome(){
     </div>`).join(''):'<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px;">本月暂无收入记录</div>';
 }
 
+// ===== SAVING ACCOUNT CRUD =====
+function openEditSavingAccount(id){
+  if(!data.savings) data.savings=[];
+  const acc=id?data.savings.find(s=>s.id===id):null;
+  document.getElementById('editSavingAccId').value=id||'';
+  document.getElementById('editSavingAccTitle').textContent=acc?'编辑账户':'新增储蓄账户';
+  document.getElementById('editSavingAccName').value=acc?acc.name:'';
+  document.getElementById('editSavingAccAmount').value=acc?acc.amount:'';
+  document.getElementById('editSavingAccNote').value=acc?acc.note||'':'';
+  document.getElementById('editSavingAccModal').classList.add('open');
+  setTimeout(()=>document.getElementById('editSavingAccName').focus(),300);
+}
+function closeEditSavingAcc(){ document.getElementById('editSavingAccModal').classList.remove('open'); }
+function saveSavingAccount(){
+  const name=document.getElementById('editSavingAccName').value.trim();
+  if(!name){alert('请输入账户名称');return;}
+  const amount=parseFloat(document.getElementById('editSavingAccAmount').value)||0;
+  const note=document.getElementById('editSavingAccNote').value;
+  if(!data.savings) data.savings=[];
+  const idVal=document.getElementById('editSavingAccId').value;
+  if(idVal){
+    const acc=data.savings.find(s=>s.id===parseInt(idVal));
+    if(acc) Object.assign(acc,{name,amount,note});
+  } else {
+    data.savings.push({id:data.nextId++,name,amount,note});
+  }
+  save(); closeEditSavingAcc(); renderSaving();
+  showToast('✅ 储蓄账户已保存','success');
+}
+function deleteSavingAccount(id){
+  if(!confirm('删除此账户？'))return;
+  data.savings=data.savings.filter(s=>s.id!==id);
+  save(); renderSaving();
+}
+
+function renderSavingAccounts(){
+  if(!data.savings) data.savings=[];
+  const total=data.savings.reduce((s,a)=>s+a.amount,0);
+  document.getElementById('savingAccountsTotal').textContent=fmt(total);
+  document.getElementById('savingAccountsList').innerHTML=data.savings.length?
+    data.savings.map(acc=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;">${acc.name}</div>
+          ${acc.note?`<div style="font-size:10px;color:var(--text3);margin-top:2px;">${acc.note}</div>`:''}
+        </div>
+        <div style="font-size:15px;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums;">${fmt(acc.amount)}</div>
+        <button onclick="openEditSavingAccount(${acc.id})" style="background:none;border:1px solid var(--border);color:var(--text2);padding:4px 8px;border-radius:var(--radius-sm);font-size:11px;cursor:pointer;font-family:var(--font);">✏</button>
+        <button onclick="deleteSavingAccount(${acc.id})" style="background:none;border:1px solid var(--border);color:var(--red);padding:4px 8px;border-radius:var(--radius-sm);font-size:11px;cursor:pointer;font-family:var(--font);">🗑</button>
+      </div>`).join(''):
+    '<div style="text-align:center;padding:16px;color:var(--text3);font-size:12px;">还没有储蓄账户<br><small>点「+ 新增」加入你的银行储蓄、ASB、定存等</small></div>';
+}
+
 // ===== 3. SAVING =====
 function renderSaving(){
   const m=thisMonthStats();
@@ -2108,6 +2198,9 @@ function updateSavingDisplay(){
       pred.innerHTML='<div style="color:var(--text3);font-size:12px;text-align:center;padding:10px;">记几笔账后会显示本月预测</div>';
     }
   }
+
+  // Saving accounts
+  renderSavingAccounts();
 
   // Goals
   const backupKeywords=['应急','紧急','备用'];
@@ -2716,7 +2809,7 @@ function saveNetWorth(){
 }
 
 // Close on overlay click
-['txModal','contribModal','budgetModal','nwModal','quickAmtModal','presetModal','editPresetModal','editInstModal','historyModal','editTxModal','editInvModal','installManageModal','editGoalModal'].forEach(id=>{
+['txModal','contribModal','budgetModal','nwModal','quickAmtModal','presetModal','editPresetModal','editInstModal','historyModal','editTxModal','editInvModal','installManageModal','editGoalModal','editSavingAccModal'].forEach(id=>{
   const el=document.getElementById(id);
   if(!el) return;
   el.addEventListener('click',e=>{
@@ -2733,6 +2826,7 @@ function saveNetWorth(){
       else if(id==='editInvModal') closeEditInvestment();
       else if(id==='installManageModal') closeInstallmentsModal();
       else if(id==='editGoalModal') closeEditGoal();
+      else if(id==='editSavingAccModal') closeEditSavingAcc();
       else closeEditPreset();
     }
   });
